@@ -1,0 +1,8 @@
+pyautogui==0.9.54
+pyperclip==1.8.2
+pynput==1.7.6
+google-generativeai==0.3.2
+cryptography==42.0.5
+customtkinter==5.2.2
+pillow==10.2.0
+pyinstaller==6.3.0 
