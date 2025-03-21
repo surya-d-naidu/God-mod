@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from tkinter import messagebox
 from PIL import Image, ImageTk
 import threading
 import pyautogui
@@ -273,7 +274,7 @@ class CodeTypingBot:
         instructions = '''1. Open your code editor/IDE
 2. Copy the question (Ctrl+C)
 3. The code will be typed automatically
-4. Press 'x' to stop typing at any time
+4. Press 'Shift' to stop typing at any time
 
 Note: Restart the program if you encounter any errors'''
 
@@ -400,19 +401,34 @@ Note: Restart the program if you encounter any errors'''
     def monitor_clipboard_and_type(self) -> None:
         try:
             genai.configure(api_key=self.selectApi())
-            model = genai.GenerativeModel(
-                model_name=self.model_var.get(),
-                system_instruction=f"Output ONLY {self.lang_var.get()} code without comments or indentation. "
-                                 f"Add new lines where necessary. "
-                                 f"{self.prefix_var.get()}"
-            )
+            model = genai.GenerativeModel(model_name=self.model_var.get())
+            generation_config = {
+                "temperature": 0.7,
+                "top_p": 1,
+                "top_k": 1,
+                "max_output_tokens": 2048,
+            }
+            
+            base_prompt = f"""Output ONLY {self.lang_var.get()} code without comments. Add new lines where necessary.
+If the input contains 'solve():', create a complete function implementation.
+For input/output handling:
+- Use appropriate input methods for the language
+- Include all necessary imports
+- Handle the input parsing inside the function
+{self.prefix_var.get()}"""
 
             pyperclip.copy("")
             while not self.stop_typing:
                 current_clipboard_content = pyperclip.paste()
                 if current_clipboard_content != self.previous_clipboard_content:
                     try:
-                        response = model.generate_content(current_clipboard_content)
+                        # Format the input if it's a solve() pattern
+                        if "solve():" in current_clipboard_content:
+                            prompt = f"{base_prompt}\nImplement the following function:\n{current_clipboard_content}"
+                        else:
+                            prompt = f"{base_prompt}\n{current_clipboard_content}"
+                            
+                        response = model.generate_content(prompt, generation_config=generation_config)
                         no_indent_text = self.remove_indents(response.text)
                         
                         # Prepare editor
@@ -446,10 +462,12 @@ Note: Restart the program if you encounter any errors'''
         if self.os_name == 'Darwin':
             pyautogui.hotkey('command', 'shift', 'down')
         else:
-            with keyboard.pressed(Key.ctrl):
-                with keyboard.pressed(Key.shift):
-                    keyboard.press(Key.end)
-                    keyboard.release(Key.end)
+            keyboard_controller.press(Key.ctrl)
+            keyboard_controller.press(Key.shift)
+            keyboard_controller.press(Key.end)
+            keyboard_controller.release(Key.end)
+            keyboard_controller.release(Key.shift)
+            keyboard_controller.release(Key.ctrl)
         
         time.sleep(0.5)
         pyautogui.press('backspace')
@@ -466,11 +484,8 @@ Note: Restart the program if you encounter any errors'''
         self.stop_typing = False
 
     def on_press(self, key):
-        try:
-            if key.char == 'x':
-                self.stop_typing_text()
-        except AttributeError:
-            pass
+        if key == Key.shift:
+            self.stop_typing_text()
 
     def run(self):
         self.root.mainloop()
