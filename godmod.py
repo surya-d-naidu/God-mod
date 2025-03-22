@@ -422,13 +422,7 @@ For input/output handling:
                 current_clipboard_content = pyperclip.paste()
                 if current_clipboard_content != self.previous_clipboard_content:
                     try:
-                        # Format the input if it's a solve() pattern
-                        if "solve():" in current_clipboard_content:
-                            prompt = f"{base_prompt}\nImplement the following function:\n{current_clipboard_content}"
-                        else:
-                            prompt = f"{base_prompt}\n{current_clipboard_content}"
-                            
-                        response = model.generate_content(prompt, generation_config=generation_config)
+                        response = model.generate_content(prompt + "\n" + current_clipboard_content, generation_config=generation_config)
                         no_indent_text = self.remove_indents(response.text)
                         
                         # Prepare editor
